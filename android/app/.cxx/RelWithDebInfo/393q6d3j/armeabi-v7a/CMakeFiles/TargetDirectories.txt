@@ -1,0 +1,2 @@
+C:/Users/Roshna/Downloads/findface_app/flutter_application_1/android/app/.cxx/RelWithDebInfo/393q6d3j/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/Roshna/Downloads/findface_app/flutter_application_1/android/app/.cxx/RelWithDebInfo/393q6d3j/armeabi-v7a/CMakeFiles/rebuild_cache.dir
