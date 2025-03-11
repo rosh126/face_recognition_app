@@ -1,5 +1,6 @@
+// ignore_for_file: depend_on_referenced_packages
+
 import 'package:sqflite/sqflite.dart';
-// ignore: depend_on_referenced_packages
 import 'package:path/path.dart';
 
 class DatabaseHelper {
@@ -20,13 +21,16 @@ class DatabaseHelper {
     final path = join(await getDatabasesPath(), 'watchlist.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
-          CREATE TABLE watchlist(
+          CREATE TABLE watchlist (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            faceId TEXT UNIQUE,  
             name TEXT,
-            imagePath TEXT
+            imagePath TEXT,
+            confidenceScore REAL,
+            createdAt TEXT
           )
         ''');
       },
@@ -34,20 +38,47 @@ class DatabaseHelper {
   }
 
   // Add a face to the watchlist
-  Future<int> addFace(String name, String imagePath) async {
+  Future<int> addFace(String faceId, String name, String imagePath, double confidenceScore) async {
     final db = await database;
-    return await db.insert('watchlist', {'name': name, 'imagePath': imagePath});
+    return await db.insert(
+      'watchlist',
+      {
+        'faceId': faceId,
+        'name': name,
+        'imagePath': imagePath,
+        'confidenceScore': confidenceScore,
+        'createdAt': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace, // Prevents duplicates
+    );
   }
 
   // Get all watchlist faces
   Future<List<Map<String, dynamic>>> getWatchlist() async {
     final db = await database;
-    return await db.query('watchlist');
+    return await db.query('watchlist', orderBy: "createdAt DESC");
+  }
+
+  // Update a face entry
+  Future<int> updateFace(int id, String name, double confidenceScore) async {
+    final db = await database;
+    return await db.update(
+      'watchlist',
+      {'name': name, 'confidenceScore': confidenceScore},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   // Remove a face from the watchlist
   Future<int> removeFace(int id) async {
     final db = await database;
     return await db.delete('watchlist', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // Clear all watchlist entries (useful for syncing with the server)
+  Future<void> clearWatchlist() async {
+    final db = await database;
+    await db.delete('watchlist');
   }
 }

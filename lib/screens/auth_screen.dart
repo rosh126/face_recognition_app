@@ -1,7 +1,7 @@
-// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously
+// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously, depend_on_referenced_packages
 
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
 import '../services/auth_service.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -16,6 +16,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isPasswordVisible = false;
   String? _errorMessage;
 
   Future<void> _login() async {
@@ -34,7 +35,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
       bool isAuthenticated = await _authService.login(username, password);
       if (isAuthenticated) {
-        Navigator.pushReplacementNamed(context, '/dashboard');
+        if (mounted) Navigator.pushReplacementNamed(context, '/dashboard');
       } else {
         setState(() => _errorMessage = "Invalid credentials. Please try again.");
       }
@@ -52,9 +53,9 @@ class _AuthScreenState extends State<AuthScreen> {
     });
 
     try {
-      bool isAuthenticated = await _authService.authenticateWithFace();
+      bool isAuthenticated = await _authService.authenticateWithFace(context as File);
       if (isAuthenticated) {
-        Navigator.pushReplacementNamed(context, '/dashboard');
+        if (mounted) Navigator.pushReplacementNamed(context, '/dashboard');
       } else {
         setState(() => _errorMessage = "Face authentication failed. Try again.");
       }
@@ -68,50 +69,64 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Lottie.asset('assets/login.json', height: 150),
-                  TextField(
-                    controller: _usernameController,
-                    decoration: InputDecoration(labelText: "Username"),
-                  ),
-                  SizedBox(height: 12),
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    decoration: InputDecoration(labelText: "Password"),
-                  ),
-                  SizedBox(height: 20),
-                  if (_errorMessage != null)
-                    Text(_errorMessage!, style: TextStyle(color: Colors.red)),
-                  SizedBox(height: 20),
-                  _isLoading
-                      ? CircularProgressIndicator()
-                      : Column(
-                          children: [
-                            ElevatedButton(
-                              onPressed: _login,
-                              child: Text("Login"),
-                            ),
-                            SizedBox(height: 12),
-                            OutlinedButton.icon(
-                              onPressed: _authenticateWithFace,
-                              icon: Icon(Icons.face),
-                              label: Text("Login with Face"),
-                            ),
-                          ],
-                        ),
-                ],
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "FACE RECOGNITION APP",
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
-            ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _usernameController,
+                decoration: const InputDecoration(labelText: "Username"),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _passwordController,
+                obscureText: !_isPasswordVisible,
+                decoration: InputDecoration(
+                  labelText: "Password",
+                  suffixIcon: IconButton(
+                    icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off),
+                    onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              if (_errorMessage != null)
+                Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
+              const SizedBox(height: 20),
+              _isLoading
+                  ? const CircularProgressIndicator()
+                  : Column(
+                      children: [
+                        ElevatedButton(
+                          onPressed: _login,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Text("Login"),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: _authenticateWithFace,
+                          icon: const Icon(Icons.face),
+                          label: const Text("Login with Face"),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ],
+                    ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

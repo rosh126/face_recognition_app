@@ -1,31 +1,36 @@
+// ignore_for_file: unused_import
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_application_1/main.dart';
+import 'package:face_recognition_app/main.dart'; // Adjust this import based on your project structure
 
 void main() {
-  testWidgets('Counter increments and decrements properly', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const FaceRecognitionApp());
+  testWidgets('App starts with login screen', (WidgetTester tester) async {
+    // Build the app
+    await tester.pumpWidget(const FaceRecognitionApp() as Widget);
 
-    // Verify the counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-    expect(find.text('-1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify the counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
-
-    // Tap the '-' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.remove));
-    await tester.pump();
-
-    // Verify the counter is back to 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Verify login fields exist
+    expect(find.byType(TextField), findsNWidgets(2)); // Username & Password fields
+    expect(find.text('Login'), findsOneWidget);
   });
+
+  testWidgets('Login button navigates to camera screen', (WidgetTester tester) async {
+    // Build the app
+    await tester.pumpWidget(const FaceRecognitionApp() as Widget);
+
+    // Enter credentials
+    await tester.enterText(find.byType(TextField).first, 'testUser');
+    await tester.enterText(find.byType(TextField).last, 'testPassword');
+
+    // Tap login button
+    await tester.tap(find.text('Login'));
+    await tester.pumpAndSettle(); // Wait for animations/navigation
+
+    // Verify navigation to camera screen
+    expect(find.text('Camera'), findsOneWidget);
+  });
+}
+
+class FaceRecognitionApp {
+  const FaceRecognitionApp();
 }

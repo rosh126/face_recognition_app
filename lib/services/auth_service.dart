@@ -3,96 +3,92 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
-  final String baseUrl = 'http://34.57.13.68'; // FindFace API Base URL
-  final FlutterSecureStorage _storage = FlutterSecureStorage();
+  final String baseUrl = 'http://34.57.13.68:18333'; // FindFace Security API
+  final String loginUrl = "http://34.57.13.68:18333/auth/login/"; // Login API
 
+  static const String adminUsername = "admin";
+  static const String adminPassword = "Admin@1234"; // Fixed admin password
+
+  /// 🔹 Login Function
   Future<bool> login(String username, String password) async {
+    // Validate hardcoded credentials first
+    if (username == adminUsername && password == adminPassword) {
+      print('✅ Hardcoded admin login successful.');
+      await _storeToken("dummy_token"); // Store a dummy token
+      return true;
+    }
+
     try {
-      String basicAuth = 'Basic ${base64Encode(utf8.encode('$username:$password'))}';
+      print('🔹 Attempting login for user: $username');
+
       var response = await http.post(
-        Uri.parse('$baseUrl/auth/login/'),
-        headers: {'Authorization': basicAuth},
+        Uri.parse(loginUrl),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          "username": username,
+          "password": password,
+        }),
       );
+
+      print('🔹 Response Status: ${response.statusCode}');
+      print('🔹 Response Data: ${response.body}');
 
       if (response.statusCode == 200) {
         var responseData = jsonDecode(response.body);
-        await _storeAuthToken(responseData['token'], responseData['token_expiration_datetime']);
-        return true;
-      }
-      return false;
-    } catch (e) {
-      print('Login Error: $e');
-      return false;
-    }
-  }
+        final token = responseData['token'];
 
-  Future<void> _storeAuthToken(String token, String expiry) async {
-    await _storage.write(key: 'auth_token', value: token);
-    await _storage.write(key: 'token_expiry', value: expiry);
-  }
-
-  Future<String?> getAuthToken() async {
-    String? token = await _storage.read(key: 'auth_token');
-    String? expiry = await _storage.read(key: 'token_expiry');
-
-    if (expiry != null) {
-      DateTime expiryDate = DateTime.tryParse(expiry) ?? DateTime.now();
-      if (DateTime.now().isAfter(expiryDate)) {
-        await logout();
-        return null;
-      }
-    }
-    return token;
-  }
-
-  Future<void> logout() async {
-    await _storage.deleteAll();
-  }
-
-  Future<Map<String, dynamic>?> authenticateUser(File imageFile) async {
-    try {
-      String? token = await getAuthToken();
-      if (token == null) return null;
-
-      var response = await _sendMultipartRequest(
-        endpoint: '/v1/identify',
-        token: token,
-        imageFile: imageFile,
-      );
-
-      if (response?.statusCode == 200) {
-        return jsonDecode(await response!.stream.bytesToString());
+        if (token != null) {
+          await _storeToken(token);
+          return true;
+        }
+      } else if (response.statusCode == 401) {
+        print('❌ Unauthorized: Invalid credentials.');
       } else {
-        print('Error: ${response?.statusCode} - ${await response?.stream.bytesToString()}');
-        return null;
+        print('❌ Unexpected error: ${response.statusCode}');
       }
+      return false;
     } catch (e) {
-      print('Exception: $e');
-      return null;
+      print('❌ Login error: $e');
+      return false;
     }
   }
 
-  Future<http.StreamedResponse?> _sendMultipartRequest({
-    required String endpoint,
-    required String token,
-    required File imageFile,
-  }) async {
-    try {
-      var request = http.MultipartRequest('POST', Uri.parse('$baseUrl$endpoint'))
-        ..headers['Authorization'] = 'Token $token'
-        ..files.add(await http.MultipartFile.fromPath('file', imageFile.path));
-
-      return await request.send();
-    } catch (e) {
-      print('Multipart Request Error: $e');
-      return null;
-    }
+  /// 🔹 Store authentication token
+  Future<void> _storeToken(String token) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('auth_token', token);
+    print('🔹 Token stored successfully');
   }
 
-  authenticateWithFace() {}
+  /// 🔹 Retrieve authentication token
+  Future<String?> getAuthToken() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('auth_token');
+  }
+
+  /// 🔹 Check if user is authenticated
+  Future<bool> isAuthenticated() async {
+    String? token = await getAuthToken();
+    return token != null;
+  }
+
+  /// 🔹 Check if user is Admin
+  Future<bool> isAdmin() async {
+    String? token = await getAuthToken();
+    return token != null && token == "dummy_token"; // Dummy check for admin
+  }
+
+  /// 🔹 Logout function
+  Future<void> logout() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('auth_token');
+    print('🔹 Logged out successfully');
+  }
+
+  authenticateWithFace(File context) {}
 }
-
-
